@@ -1,0 +1,629 @@
+---
+title: "ST300 Project"
+output: html_document
+---
+# Setup 
+---
+```{r}
+setwd("~/Documents/Year Three/ST300")
+library(ggplot2); library(car); library(leaps); library(plyr)
+dat <- read.csv("Market_data2020.csv", header=T)
+```
+
+Look at summary
+
+```{r}
+names(dat)
+summary(dat)
+class(dat$ROE)  # ROE is wrongly viewed as a factor
+```
+
+Some variables are wrongly recognised as factors. 
+Converting factors that should be numeric:
+ROE, EPS_Growth, Cost_of_Equity, CEO_holding, Institutional_holding
+
+```{r}
+#strip out % and convert factor to numeric overwriting existing variable
+dat$ROE <-  as.numeric(gsub("[\\%,]", "", dat$ROE))
+dat$EPS_Growth <-  as.numeric(gsub("[\\%,]", "", dat$EPS_Growth))
+dat$Cost_of_Equity <-  as.numeric(gsub("[\\%,]", "", dat$Cost_of_Equity))
+dat$CEO_holding <-  as.numeric(gsub("[\\%,]", "", dat$CEO_holding))
+dat$Institutional_holding <-  as.numeric(gsub("[\\%,]", "", dat$Institutional_holding))
+
+class(dat$Region) #Region is factor
+class(dat$Industry) #Industry is factor
+class(dat$Number_of_firms) #Integer
+```
+
+Saving changes to data in new file
+Aftter the changes, save the data into a new file using `write.csv()`
+
+```{r}
+write.csv(dat,'Market_data_clean.csv')
+dat <- read.csv('Market_data_clean.csv')
+```
+
+# Checking the data 
+
+```{r}
+summary(dat$PE)
+dim(dat)
+
+ggplot(dat) + geom_histogram(aes(x= PE),fill = 'darkblue') + labs(title ="Histogram of Data Against Outcome Variable", x = "PE", y = "Density") +theme(legend.position = 'none',plot.title = element_text(size = 10, face = "bold")) 
+```
+
+
+This and the summary show that there is a skewed distribution.
+There are also three extream values that i shall check
+
+```{r}
+ggplot(dat, aes(seq_along(PE), PE)) +
+  geom_col()+
+  xlab("Observation number")+
+  ylab("Cook's D")
+
+dat[order(dat$PE),]
+```
+
+This shows max three values far higher, I shall make note of this for later modelling.
+
+
+```{r}
+ggplot(dat, aes(seq_along(PE), PE)) +
+  geom_col()+
+  xlab("Observation number")+
+  ylab("Cook's D")
+```
+
+```{r}
+dat <- dat[-69,]
+dat <- dat[,-1]
+```
+
+```{r}
+summary((dat))
+```
+
+# Single Variate Analysis
+
+```{r}
+ggplot(dat,aes(x=CEO_holding, y=PE))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~CEO_holding, dat))
+plot(lm((PE)~CEO_holding, dat), which = c(1:5))
+ggplot(dat, aes(x=CEO_holding, y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=Number_of_firms, y=(PE)))+
+  geom_point(colour = dat$ROE^2)+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Number_of_firms, dat))
+plot(lm((PE)~(Number_of_firms), dat), which = c(1:5))
+ggplot(dat, aes(x=(Number_of_firms), y = ..density.. , fill = cut(..density.., 1000))) + geom_histogram()+ theme(legend.position = "none")
+```
+
+```{r}
+ggplot(dat,aes(x=(ROE), y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~ROE, dat))
+ggplot(dat, aes(x=ROE, y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=EPS_Growth, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~EPS_Growth, dat))
+ggplot(dat, aes(x=EPS_Growth, y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=PBV, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+plot(lm((PE)~PBV, dat), which = c(1:5))
+ggplot(dat, aes(x=PBV, y = ..density..)) + geom_histogram()
+
+summary(lm((PE)~PBV, dat))
+```
+
+```{r}
+ggplot(dat,aes(x=PS, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~PS, dat))
+plot(lm((PE)~PS, dat), which = c(1:5))
+ggplot(dat, aes(x=(PS), y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=Beta, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Beta, dat))
+
+plot(lm((PE)~Beta, dat), which = c(1:5))
+ggplot(dat, aes(x=Beta, y = ..density..)) + geom_histogram()
+
+```
+
+```{r}
+ggplot(dat,aes(x=Cost_of_Equity, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Cost_of_Equity, dat))
+plot(lm((PE)~Cost_of_Equity, dat), which = c(1:5))
+ggplot(dat, aes(x=Cost_of_Equity, y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=Institutional_holding, y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Institutional_holding, dat))
+plot(lm((PE)~Institutional_holding, dat), which = c(1:5))
+ggplot(dat, aes(x=(Institutional_holding), y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=Region, y=(PE)))+
+  geom_boxplot()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Region, dat))
+plot(lm((PE)~Region, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=Industry, y=(PE)))+
+  geom_boxplot()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm((PE)~Industry, dat))
+plot(lm((PE)~Industry, dat), which = c(1:5))
+```
+
+# Single Variate Anyalysis inc transformation
+
+```{r}
+ggplot(dat,aes(x=CEO_holding, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~CEO_holding, dat))
+plot(lm(log(PE)~CEO_holding, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=(ROE), y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~ROE, dat))
+plot(lm(log(PE)~(ROE), dat), which = c(1:5))
+ggplot(dat, aes(x=(ROE), y = ..density..)) + geom_histogram()
+
+```
+
+```{r}
+ggplot(dat,aes(x=EPS_Growth, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~EPS_Growth, dat))
+```
+
+```{r}
+ggplot(dat,aes(x=PBV, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~PBV, dat))
+
+plot(lm(log(PE)~PBV, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=Beta, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Beta, dat))
+
+plot(lm(log(PE)~Beta, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=Cost_of_Equity, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Cost_of_Equity, dat))
+plot(lm(log(PE)~Cost_of_Equity, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=Institutional_holding, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Institutional_holding, dat))
+plot(lm(log(PE)~Institutional_holding, dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=log(Number_of_firms), y=(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Number_of_firms, dat))
+plot(lm(log(PE)~(Number_of_firms), dat), which = c(1:5))
+```
+
+The data takese a funnel shape indicating hetrosketascisity
+
+```{r}
+ggplot(dat,aes(x=log(Number_of_firms), y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Number_of_firms, dat))
+plot(lm(log(PE)~log(Number_of_firms), dat), which = c(1:5))
+```
+
+This seems to fix it, I shall mend the data set to contain log(Number_of_firms) by defult.
+
+```{r}
+dat$log_number_of_firms <- log(dat$Number_of_firms)
+dat <- dat[,-3]
+```
+
+```{r}
+ggplot(dat,aes(x=(PS), y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~(PS), dat))
+plot(lm(log(PE)~(PS), dat), which = c(1:5))
+ggplot(dat, aes(x=(PS), y = ..density..)) + geom_histogram()
+```
+
+```{r}
+ggplot(dat,aes(x=log(PS), y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~log(PS), dat))
+plot(lm(log(PE)~log(PS), dat), which = c(1:5))
+ggplot(dat, aes(x=log(PS), y = ..density..)) + geom_histogram()
+```
+
+This appears to be a vast improvement, I shall keep the change.
+
+```{r}
+names(dat)
+dat$log_PS <- (log(dat$PS))
+dim(dat)
+dat <- dat[,-7]
+dim(dat)
+names(dat)
+```
+
+```{r}
+ggplot(dat,aes(x=Region, y=log(PE)))+
+  geom_boxplot()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Region, dat))
+plot(lm(log(PE)~(Region), dat))
+```
+
+```{r}
+ggplot(dat,aes(x=Industry, y=log(PE)))+
+  geom_boxplot()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~Industry, dat))
+plot(lm(log(PE)~Industry, dat))
+```
+
+As the transformation fixes most of the QQ plots I will keep it in.
+
+# Model 1
+
+##Preliminary Checks
+
+### Backwards elimnation
+
+```{r}
+b.elim<-lm(log(PE)~.,dat)
+b.elim<-step(b.elim)
+summary(b.elim)
+```
+
+### Forwards selection 
+
+```{r}
+null <- lm(log(PE)~1, data=dat)
+full <- lm(log(PE)~.,data=dat)
+f.sel <- step(null, scope =  list(lower=null, upper=full),direction="forward", trace=0)
+summary(f.sel)
+```
+
+## Best Subsets 1
+
+```{r}
+best_subsets <- leaps::regsubsets(log(PE)~.-Industry,nvmax=11,data=dat, really.big=T)
+plot(best_subsets, scale="bic") 
+```
+
+The model selected by best subset is the top row
+
+```{r}
+model <- lm(log(PE)~ log_number_of_firms + log_PS + PBV + EPS_Growth + Region + Cost_of_Equity, dat)
+summary(model)
+```
+
+# Model 2
+
+## Removing three extream values 
+
+```{r}
+ggplot(dat, aes(seq_along(PE), PE)) +
+  geom_col()+
+  xlab("Observation number")+
+  ylab("Cook's D")
+```
+
+```{r}
+which.max(dat$PE)
+dim(dat)
+dat <- dat[-c(80,28,262),]
+dim(dat)
+ggplot(dat) + geom_histogram(aes(x= PE, y = ..density..))
+```
+
+```{r}
+dim(dat)
+ggplot(dat, aes(seq_along(PE), PE)) +
+  geom_col()+
+  xlab("Observation number")+
+  ylab("Cook's D")
+```
+
+### Backwards elimnation
+
+```{r}
+b.elim<-lm(log(PE)~.,dat)
+b.elim<-step(b.elim)
+summary(b.elim)
+```
+
+### Forwards selection
+
+```{r}
+null <- lm(log(PE)~1, data=dat)
+full <- lm(log(PE)~.,data=dat)
+f.sel <- step(null, scope =  list(lower=null, upper=full),direction="forward", trace=0)
+summary(f.sel)
+```
+
+## Best Subsets 2
+
+```{r}
+#nvmax: number of predictors
+best_subsets <- leaps::regsubsets(log(PE)~.-Industry,nvmax=10,data=dat, really.big=T)
+plot(best_subsets, scale="bic") #by default uses BIC; may use "adjr2"
+
+best_subsets <- lm(log(PE)~ Beta + log_number_of_firms + log_PS, dat)
+summary(best_subsets)
+```
+
+There is a substantial improvement in the models. I shall eliminate this three variables for the reason of them being extream, thus not representative of the standard point.
+
+# Model 3
+## Removing 89th point 
+
+Point 89 has a high influence as shown by its cooks distance far beyond the othe points (Point 89 is the 87th point), lets remove this value and re run the models to see ifthey significantly change
+
+```{r}
+dim(dat)
+ggplot(dat, aes(seq_along(PE), PE)) +
+  geom_col()+
+  xlab("Observation number")+
+  ylab("Cook's D")
+dat <- dat[-86,]
+dim(dat)
+ggplot(dat,aes(x=PBV, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~PBV, dat))
+
+plot(lm(log(PE)~PBV, dat))
+
+```
+
+Other value appear influential but these should be left in because of the stochastic nature of finacial data.
+
+```{r}
+ggplot(dat,aes(x=log_PS, y=log(PE)))+
+  geom_point()+
+  theme_bw()+
+  geom_smooth(method=lm,se=F)
+summary(lm(log(PE)~log_PS, dat))
+plot(lm(log(PE)~log_PS, dat))
+```
+
+## Preliminary checks 
+
+### Backwards elimnation 3
+
+```{r}
+b.elim<-lm(log(PE)~.,dat)
+b.elim<-step(b.elim)
+summary(b.elim)
+```
+
+### Forwards elimation 3
+
+```{r}
+null <- lm(log(PE)~1, data=dat)
+full <- lm(log(PE)~.,data=dat)
+f.sel <- step(null, scope =  list(lower=null, upper=full),direction="forward", trace=0)
+summary(f.sel)
+
+```
+
+## Best Subsets 3
+
+```{r}
+#nvmax: number of predictors
+best_subsets <- leaps::regsubsets(log(PE)~.-Industry,nvmax=10,data=dat, really.big=T)
+plot(best_subsets, scale="bic") #by default uses BIC; may use "adjr2"
+
+best_subsets <- lm(log(PE)~ EPS_Growth + PBV + Beta + log_number_of_firms + log_PS, dat)
+summary(best_subsets)
+plot(cooks.distance(lm(log(PE)~ EPS_Growth + PBV + Beta + log_number_of_firms + log_PS, dat)))
+```
+
+```{r}
+plot(lm(log(PE)~EPS_Growth +PBV + Beta + log_PS + log_number_of_firms, dat), which=4)
+```
+
+This point has a significant impact on the data, it was extreamly influential so we should remove it from the data.
+
+# Model 4
+
+## Removing point 83 points
+
+```{r}
+dat <- dat[-80,]
+```
+
+##Preliminary checks
+
+### Backwards elimnation 4
+
+```{r}
+b.elim<-lm(log(PE)~.,dat)
+b.elim<-step(b.elim)
+summary(b.elim)
+```
+
+### Forwards elimation 4
+
+```{r}
+null <- lm(log(PE)~1, data=dat)
+full <- lm(log(PE)~.,data=dat)
+f.sel <- step(null, scope =  list(lower=null, upper=full),direction="forward", trace=0)
+summary(f.sel)
+```
+
+## Best Subsets 4
+
+```{r}
+best_subsets <- leaps::regsubsets(log(PE)~.-Industry,nvmax=10,data=dat, really.big=T)
+plot(best_subsets, scale="bic") 
+
+best_subsets <- lm(log(PE) ~ PBV + Beta + log_number_of_firms + log_PS + ROE, dat)
+summary(best_subsets)
+```
+
+# Diagnostics
+
+```{r}
+plot(best_subsets, which = c(1:5))
+summary(best_subsets)
+```
+
+```{r}
+vif(best_subsets)
+names(dat)
+cor(dat[,c(3,6,7,11,12)])
+```
+
+```{r}
+#The next line is commented out as it's the model is rejected. 
+#dat <- dat[-11,] # 69,134,24 insert these in one by one
+best_subsets <- leaps::regsubsets(log(PE)~.-Industry,nvmax=10,data=dat, really.big=T)
+plot(best_subsets, scale="bic") 
+
+best_subsets <- lm(log(PE) ~ PBV + Beta + log_number_of_firms + log_PS + ROE, dat)
+summary(best_subsets)
+
+plot(best_subsets, which = c(1:5))
+summary(best_subsets)
+dim(dat)
+```
+```{r}
+names(dat)
+cor(dat[c(3,4)])
+summary(dat)
+```
+# Single Variate Anyalysis inc transformation
+
+```{r}
+ggplot(dat,aes(x=(ROE), y=log(PE)))+
+  geom_point()+
+  theme_bw()
+summary(lm(log(PE)~ROE, dat))
+plot(lm(log(PE)~(ROE), dat), which = c(1:5))
+ggplot(dat, aes(x=(ROE), y = ..density..)) + geom_histogram()
+which.max(dat$ROE)
+```
+
+
+
+```{r}
+ggplot(dat,aes(x=PBV, y=log(PE)))+
+  geom_point()+
+  theme_bw()
+summary(lm(log(PE)~PBV, dat))
+
+plot(lm(log(PE)~PBV, dat), which = c(1:5))
+which.max(dat$PBV)
+dat$PBV[65:71]
+```
+
+```{r}
+ggplot(dat,aes(x=Beta, y=log(PE)))+
+  geom_point()+
+  theme_bw()
+summary(lm(log(PE)~Beta, dat))
+
+plot(lm(log(PE)~Beta, dat), which = c(1:5))
+```
+
+
+
+```{r}
+ggplot(dat,aes(x=log_number_of_firms, y=(PE)))+
+  geom_point()+
+  theme_bw()
+summary(lm(log(PE)~log_number_of_firms, dat))
+plot(lm(log(PE)~(log_number_of_firms), dat), which = c(1:5))
+```
+
+```{r}
+ggplot(dat,aes(x=(log_PS), y=log(PE)))+
+  geom_point()+
+  theme_bw()
+summary(lm(log(PE)~(log_PS), dat))
+plot(lm(log(PE)~(log_PS), dat), which = c(1:5))
+ggplot(dat, aes(x=(log_PS), y = ..density..)) + geom_histogram()
+```
+
+
